@@ -56,8 +56,11 @@ class Analyzer():
 
 
     def analyze_code(self, code):
-        # Initiate output
+        # Initialize output
         output = ''
+
+        # Initialize errors
+        errors = ''
 
         # Split the code in lines (removing blanks)
         code = [x.strip() for x in code.split('\n') if x.strip() != '']
@@ -76,7 +79,7 @@ class Analyzer():
                 
                 # If we are in a string
                 if line_tokens[token_idx] == '"':
-                    output += f'{line_tokens[token_idx]} - delimeter, {len(line_tokens[token_idx])}, linia {line_idx}\n'
+                    output += f'{line_tokens[token_idx]} - delimeter, {len(line_tokens[token_idx])}, linia {line_idx + 1}\n'
 
                     # We gather all of the string elements
                     string_idx = token_idx + 1
@@ -86,21 +89,21 @@ class Analyzer():
                         string_idx += 1
                     
                     # Add the string and the closing "
-                    output += f'{string_output[1:]} - string, {len(string_output[1:])}, linia {line_idx}\n'
-                    output += f'{line_tokens[string_idx]} - delimeter, {len(line_tokens[string_idx])}, linia {line_idx}\n'
+                    output += f'{string_output[1:]} - string, {len(string_output[1:])}, linia {line_idx + 1}\n'
+                    output += f'{line_tokens[string_idx]} - delimeter, {len(line_tokens[string_idx])}, linia {line_idx + 1}\n'
 
                     # Increment the token_idx
                     token_idx = string_idx + 1
 
                 token_type = self.return_token_type(line_tokens[token_idx])
                 if token_type != '':
-                    output += f'{line_tokens[token_idx]} - {token_type}, {len(line_tokens[token_idx])}, linia {line_idx}\n'
+                    output += f'{line_tokens[token_idx]} - {token_type}, {len(line_tokens[token_idx])}, linia {line_idx + 1}\n'
                 else:
-                    output += f'{line_tokens[token_idx]} - unknown, {len(line_tokens[token_idx])}, linia {line_idx}\n'
+                    errors += f'Eroare linia {line_idx + 1}: {line_tokens[token_idx]}\n'
 
                 token_idx += 1
 
-        return output
+        return output, errors
 
 
     def analyzed_code_to_json(self):

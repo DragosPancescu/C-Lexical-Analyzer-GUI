@@ -112,6 +112,7 @@ class AnalyzerApp(tk.Tk):
     def new_file(self):
         self.text_box.delete('1.0', END)
         self.output_box.delete('1.0', END)
+        self.error_box.delete('1.0', END)
 
         self.title('New File - CAnalyzer')
 
@@ -121,6 +122,7 @@ class AnalyzerApp(tk.Tk):
     def open_file(self):
         self.text_box.delete('1.0', END)
         self.output_box.delete('1.0', END)
+        self.error_box.delete('1.0', END)
 
         text_file = filedialog.askopenfilename(title='Open File', filetypes=[('C Files', '*.c')])
 
@@ -170,7 +172,10 @@ class AnalyzerApp(tk.Tk):
         code = self.text_box.get(1.0, END)
 
         if code != '\n':
-            analyzed_code = self.analyzer.analyze_code(code)
+            analyzed_code, errors = self.analyzer.analyze_code(code)
 
             self.output_box.delete('1.0', END)
             self.output_box.insert(END, analyzed_code)
+
+            self.error_box.delete('1.0', END)
+            self.error_box.insert(END, errors)
