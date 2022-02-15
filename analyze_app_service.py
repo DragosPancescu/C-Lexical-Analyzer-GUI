@@ -1,4 +1,5 @@
 import re
+from sqlite3 import SQLITE_CREATE_INDEX
 
 class Analyzer():
 
@@ -17,9 +18,12 @@ class Analyzer():
 
         self.COMMENTS = ['//', '/*']
 
+    # TODO REGEX for floats
     def return_token_type(self, token):
         # Checks for delimiters, keywords and operators
-        if token in self.DELIMITERS:
+        if token in self.COMMENTS:
+            return 'comment'
+        elif token in self.DELIMITERS:
             return 'delimiter'
         elif token in self.KEYWORDS:
             return 'keyword'
@@ -50,6 +54,7 @@ class Analyzer():
 
         return tokens
 
+
     def analyze_code(self, code):
         # Initiate output
         output = ''
@@ -57,21 +62,44 @@ class Analyzer():
         # Split the code in lines (removing blanks)
         code = [x.strip() for x in code.split('\n') if x.strip() != '']
 
-        # Iterate through each line
+        # Iterate through each line and tokenize them
         tokens = []
         for line in code:
             tokens.append(self.tokenize_line(line))
 
 
-        output = ''
+        # Iterate again to validate and transform the tokens
+        # into end user form
         for line_idx, line_tokens in enumerate(tokens):
-            for token in line_tokens:
-                token_type = self.return_token_type(token)
+            token_idx = 0
+            while token_idx < len(line_tokens):
+                
+                # If we are in a string
+                if line_tokens[token_idx] == '"':
+                    output += f'{line_tokens[token_idx]} - delimeter, {len(line_tokens[token_idx])}, linia {line_idx}\n'
 
+                    # We gather all of the string elements
+                    string_idx = token_idx + 1
+                    string_output = ''
+                    while line_tokens[string_idx] != '"':
+                        string_output += f' {line_tokens[string_idx]}'
+                        string_idx += 1
+                    
+                    # Add the string and the closing "
+                    output += f'{string_output[1:]} - string, {len(string_output[1:])}, linia {line_idx}\n'
+                    output += f'{line_tokens[string_idx]} - delimeter, {len(line_tokens[string_idx])}, linia {line_idx}\n'
+
+                    # Increment the token_idx
+                    token_idx = string_idx + 1
+
+                token_type = self.return_token_type(line_tokens[token_idx])
                 if token_type != '':
-                    output += f'{token} - {token_type}, {len(token)}, linia {line_idx}\n'
+                    output += f'{line_tokens[token_idx]} - {token_type}, {len(line_tokens[token_idx])}, linia {line_idx}\n'
                 else:
-                    output += f'{token} - unknown, {len(token)}, linia {line_idx}\n'
+                    output += f'{line_tokens[token_idx]} - unknown, {len(line_tokens[token_idx])}, linia {line_idx}\n'
+
+                token_idx += 1
+
         return output
 
 

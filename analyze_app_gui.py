@@ -3,15 +3,13 @@ import tkinter as tk
 from tkinter import *
 from tkinter import filedialog
 
-from analyze_app_service import Analyzer
-
 class AnalyzerApp(tk.Tk):
     
-    def __init__(self):
+    def __init__(self, analyzer):
         super().__init__()
 
         self.open_status_name = False
-        self.analyzer = Analyzer()
+        self.analyzer = analyzer
 
         w = 1000 # width for the Tk self
         h = 700 # height for the Tk self
