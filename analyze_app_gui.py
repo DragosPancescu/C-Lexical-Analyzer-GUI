@@ -3,15 +3,15 @@ import tkinter as tk
 from tkinter import *
 from tkinter import filedialog
 
-from translator_app_service import Translator
+from analyze_app_service import Analyzer
 
-class TranslatorApp(tk.Tk):
+class AnalyzerApp(tk.Tk):
     
     def __init__(self):
         super().__init__()
 
-        self.open_status = False
-        self.translator = Translator()
+        self.open_status_name = False
+        self.analyzer = Analyzer()
 
         w = 1000 # width for the Tk self
         h = 700 # height for the Tk self
@@ -24,11 +24,11 @@ class TranslatorApp(tk.Tk):
         x = (ws/2) - (w/2)
         y = (hs/2) - (h/2)
 
-        self.title('CTranslator')
+        self.title('CAnalyzer')
         self.resizable(0,0)
         self.configure(bg='#949494')
 
-        self.geometry(f'{w}x{h}+{int(x)}+{int(y)}')
+        self.geometry(f'{w}x{h}+{int(x)}+{int(y - 50)}')
 
         # Bind shortcuts
         self.bind_all('<Control-s>', self.save_file)
@@ -61,7 +61,7 @@ class TranslatorApp(tk.Tk):
 
         # Create text box
         self.text_box = Text(self.text_input_frame, 
-                        width=97, 
+                        width=85, 
                         height=35,
                         font=('Courier', 10),
                         undo=True, 
@@ -72,7 +72,7 @@ class TranslatorApp(tk.Tk):
 
         # Create output
         self.output_box = Text(self.output_frame, 
-                        width=25, 
+                        width=37, 
                         height=35,
                         font=('Courier', 10), 
                         yscrollcommand=self.output_scroll.set)
@@ -102,7 +102,7 @@ class TranslatorApp(tk.Tk):
         self.file_menu.add_command(label='Save', command=self.save_file)
         self.file_menu.add_command(label='Save As', command=self.save_as_file)
         self.file_menu.add_separator()
-        self.file_menu.add_command(label='Save Translation As')
+        self.file_menu.add_command(label='Save Analyzed Code As')
 
         # Add run menu
         self.run_menu = Menu(self.top_bar, tearoff=False)
@@ -115,7 +115,7 @@ class TranslatorApp(tk.Tk):
         self.text_box.delete('1.0', END)
         self.output_box.delete('1.0', END)
 
-        self.title('New File - CTranslator')
+        self.title('New File - CAnalyzer')
 
         self.open_status_name = False
 
@@ -132,7 +132,7 @@ class TranslatorApp(tk.Tk):
 
         file_name = text_file.split('/')[-1]
 
-        self.title(f'{file_name} - CTranslator')
+        self.title(f'{file_name} - CAnalyzer')
 
         # Read file contents and show them
         file_contents = ''
@@ -150,7 +150,7 @@ class TranslatorApp(tk.Tk):
 
             file_name = text_file.split('/')[-1]
 
-            self.title(f'{file_name} - CTranslator')
+            self.title(f'{file_name} - CAnalyzer')
 
             # Write text box contents to file
             with open(text_file, 'w') as f:
@@ -172,7 +172,7 @@ class TranslatorApp(tk.Tk):
         code = self.text_box.get(1.0, END)
 
         if code != '\n':
-            translation = self.translator.translate_code(code)
+            analyzed_code = self.analyzer.analyze_code(code)
 
             self.output_box.delete('1.0', END)
-            self.output_box.insert(END, translation)
+            self.output_box.insert(END, analyzed_code)

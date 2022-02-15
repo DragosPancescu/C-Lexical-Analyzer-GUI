@@ -1,5 +1,5 @@
-from translator_app_gui import TranslatorApp
+from analyze_app_gui import AnalyzerApp
 
 if __name__ == "__main__":
-    app = TranslatorApp()
+    app = AnalyzerApp()
     app.mainloop()
