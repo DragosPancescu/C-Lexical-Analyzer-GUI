@@ -1,3 +1,4 @@
+from textwrap import fill
 import tkinter as tk
 
 from tkinter import *
@@ -59,34 +60,38 @@ class AnalyzerApp(tk.Tk):
 
         # Create text box
         self.text_box = Text(self.text_input_frame, 
-                        width=85, 
-                        height=35,
-                        font=('Courier', 10),
-                        undo=True, 
-                        yscrollcommand=self.text_scroll.set)
+                            width=85, 
+                            height=35,
+                            font=('Courier', 10),
+                            undo=True, 
+                            yscrollcommand=self.text_scroll.set)
 
         self.text_box.pack()
         self.text_scroll.config(command=self.text_box.yview)
 
         # Create output
         self.output_box = Text(self.output_frame, 
-                        width=37, 
-                        height=35,
-                        font=('Courier', 10), 
-                        yscrollcommand=self.output_scroll.set)
+                            width=37, 
+                            height=35,
+                            font=('Courier', 10),
+                            state=DISABLED,
+                            yscrollcommand=self.output_scroll.set)
 
         self.output_box.pack()
         self.output_scroll.config(command=self.output_box.yview)
+        self.output_box.bind("<1>", lambda event: self.output_box.focus_set())
 
         # Create error output
         self.error_box = Text(self.error_frame, 
-                        width=122, 
-                        height=10,
-                        font=('Courier', 10), 
-                        yscrollcommand=self.error_scroll.set)
+                            width=122, 
+                            height=10,
+                            font=('Courier', 10),
+                            state=DISABLED,
+                            yscrollcommand=self.error_scroll.set)
 
         self.error_box.pack()
         self.error_scroll.config(command=self.error_box.yview)
+        self.error_box.bind("<1>", lambda event: self.error_box.focus_set())
 
         # Create menu
         self.top_bar = Menu(self)
@@ -174,8 +179,12 @@ class AnalyzerApp(tk.Tk):
         if code != '\n':
             analyzed_code, errors = self.analyzer.analyze_code(code)
 
+            self.output_box.configure(state=NORMAL)
             self.output_box.delete('1.0', END)
             self.output_box.insert(END, analyzed_code)
+            self.output_box.configure(state=DISABLED)
 
+            self.error_box.configure(state=NORMAL)
             self.error_box.delete('1.0', END)
             self.error_box.insert(END, errors)
+            self.error_box.configure(state=DISABLED)

@@ -1,5 +1,4 @@
 import re
-from sqlite3 import SQLITE_CREATE_INDEX
 
 class Analyzer():
 
@@ -17,6 +16,7 @@ class Analyzer():
             self.OPERATORS = f.read().split('\n')
 
         self.COMMENTS = ['//', '/*']
+        self.IDENTIFIER_RE = '[_a-zA-Z][_a-zA-Z0-9]{0,30}'
 
     # TODO REGEX for floats
     def return_token_type(self, token):
@@ -31,7 +31,7 @@ class Analyzer():
             return 'operator'
         elif token.isdigit():
             return 'int'
-        elif re.match('[_a-zA-Z][_a-zA-Z0-9]{0,30}', token):
+        elif re.match(self.IDENTIFIER_RE, token):
             return 'identifier'
         return ''
 
