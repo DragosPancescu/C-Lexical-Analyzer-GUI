@@ -14,7 +14,7 @@ class AnalyzerApp(tk.Tk):
         self.open_status_name = False
         self.analyzer = analyzer
 
-        w = 1000 # width for the Tk self
+        w = 1100 # width for the Tk self
         h = 700 # height for the Tk self
 
         # Get screen width and height
@@ -62,7 +62,7 @@ class AnalyzerApp(tk.Tk):
 
         # Create text box
         self.text_box = Text(self.text_input_frame, 
-                            width=85, 
+                            width=87, 
                             height=35,
                             font=('Courier', 10),
                             undo=True, 
@@ -73,7 +73,7 @@ class AnalyzerApp(tk.Tk):
 
         # Create output
         self.output_box = Text(self.output_frame, 
-                            width=37, 
+                            width=45, 
                             height=35,
                             font=('Courier', 10),
                             state=DISABLED,
@@ -85,7 +85,7 @@ class AnalyzerApp(tk.Tk):
 
         # Create error output
         self.error_box = Text(self.error_frame, 
-                            width=122, 
+                            width=140, 
                             height=10,
                             font=('Courier', 10),
                             state=DISABLED,

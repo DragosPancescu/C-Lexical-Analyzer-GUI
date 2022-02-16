@@ -1,4 +1,5 @@
 import re
+import token
 
 class Analyzer():
 
@@ -55,7 +56,11 @@ class Analyzer():
                 last = current + 1
             current += 1
 
-        return tokens
+        # Check if we have a remaining token left
+        if line[last:current] != '':
+            tokens.append(line[last:current])
+
+        return tokens  
 
 
     def analyze_code(self, code):
@@ -73,62 +78,55 @@ class Analyzer():
         for line in code:
             tokens.append(self.tokenize_line(line))
 
-
-        # Iterate again to validate and transform the tokens
-        # into end user form
+        # Iterate again to validate and transform the tokens into end user form
         for line_idx, line_tokens in enumerate(tokens):
+            token_idx = 0
 
             try:
-                token_idx = 0
                 while token_idx < len(line_tokens):
 
-                    # If we are in a STRING
-                    if line_tokens[token_idx] == '"':
+                    # If we are in a single line COMMENT
+                    if line_tokens[token_idx] == '//':
+                        
+                        # Add the comment indicator to the output
+                        output += f'{line_tokens[token_idx]} - single line comment, {len(line_tokens[token_idx])}, linia {line_idx + 1}\n'
+                        
+                        token_idx += 1
+
+                        # Add the comment string and break the loop
+                        string_output = ''
+                        while token_idx < len(line_tokens):
+                            string_output += f' {line_tokens[token_idx]}'
+                            token_idx += 1
+
+                        output += f'{string_output[1:]} - comment string, {len(string_output[1:])}, linia {line_idx + 1}\n'
+                        break
+
+                    # If we are in a STRING or CHAR
+                    if line_tokens[token_idx] in ['"', "'"]:
+                        
+                        # Stores either a " or a '
+                        delim = line_tokens[token_idx]
 
                         # We gather all of the string elements
                         string_idx = token_idx + 1
                         string_output = ''
 
                         # While the closing delimiter is not found or we got to the end
-                        while line_tokens[string_idx] != '"':
+                        while line_tokens[string_idx] != delim:
                             string_output += f' {line_tokens[string_idx]}'
                             string_idx += 1
 
                             # If we reached end of line
                             if not string_idx < len(line_tokens):
                                 break
-
+                        
                         # Closing delimiter is found
                         if string_idx < len(line_tokens):
-                            if line_tokens[string_idx] == '"':
+                            if line_tokens[string_idx] == delim:
                                 # Add the the delimiters and string to the output
                                 output += f'{line_tokens[string_idx]} - delimeter, {len(line_tokens[string_idx])}, linia {line_idx + 1}\n'
                                 output += f'{string_output[1:]} - string, {len(string_output[1:])}, linia {line_idx + 1}\n'
-                                output += f'{line_tokens[string_idx]} - delimeter, {len(line_tokens[string_idx])}, linia {line_idx + 1}\n'
-
-                                # Increment the token_idx
-                                token_idx = string_idx + 1
-
-                    # If we are in a CHAR
-                    if line_tokens[token_idx] == "'":
-
-                        # We gather all of the string elements
-                        string_idx = token_idx + 1
-                        string_output = ''
-
-                        # While the closing delimiter is not found or we got to the end
-                        while line_tokens[string_idx] != "'":
-                            string_output += f' {line_tokens[string_idx]}'
-                            string_idx += 1
-
-                            if not string_idx < len(line_tokens):
-                                break
-
-                        if string_idx < len(line_tokens):
-                            if line_tokens[string_idx] == "'":
-                                # Add the the delimiters and char to the output
-                                output += f'{line_tokens[string_idx]} - delimeter, {len(line_tokens[string_idx])}, linia {line_idx + 1}\n'
-                                output += f'{string_output[1:]} - char, {len(string_output[1:])}, linia {line_idx + 1}\n'
                                 output += f'{line_tokens[string_idx]} - delimeter, {len(line_tokens[string_idx])}, linia {line_idx + 1}\n'
 
                                 # Increment the token_idx
