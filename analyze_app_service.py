@@ -17,10 +17,11 @@ class Analyzer():
 
         self.COMMENTS = ['//', '/*']
         self.IDENTIFIER_RE = '[_a-zA-Z][_a-zA-Z0-9]{0,30}'
+        self.FLOAT_RE = '([0-9]*[.])?[0-9]+'
 
-    # TODO REGEX for floats
+    # TODO REGEX for floats when multiple dots are in the number
     def return_token_type(self, token):
-        # Checks for delimiters, keywords and operators
+        # Returns token type
         if token in self.COMMENTS:
             return 'comment'
         elif token in self.DELIMITERS:
@@ -31,6 +32,8 @@ class Analyzer():
             return 'operator'
         elif token.isdigit():
             return 'int'
+        elif re.match(self.FLOAT_RE, token):
+            return 'float'
         elif re.match(self.IDENTIFIER_RE, token):
             return 'identifier'
         return ''
@@ -74,34 +77,78 @@ class Analyzer():
         # Iterate again to validate and transform the tokens
         # into end user form
         for line_idx, line_tokens in enumerate(tokens):
-            token_idx = 0
-            while token_idx < len(line_tokens):
-                
-                # If we are in a string
-                if line_tokens[token_idx] == '"':
-                    output += f'{line_tokens[token_idx]} - delimeter, {len(line_tokens[token_idx])}, linia {line_idx + 1}\n'
 
-                    # We gather all of the string elements
-                    string_idx = token_idx + 1
-                    string_output = ''
-                    while line_tokens[string_idx] != '"':
-                        string_output += f' {line_tokens[string_idx]}'
-                        string_idx += 1
-                    
-                    # Add the string and the closing "
-                    output += f'{string_output[1:]} - string, {len(string_output[1:])}, linia {line_idx + 1}\n'
-                    output += f'{line_tokens[string_idx]} - delimeter, {len(line_tokens[string_idx])}, linia {line_idx + 1}\n'
+            try:
+                token_idx = 0
+                while token_idx < len(line_tokens):
 
-                    # Increment the token_idx
-                    token_idx = string_idx + 1
+                    # If we are in a STRING
+                    if line_tokens[token_idx] == '"':
 
-                token_type = self.return_token_type(line_tokens[token_idx])
-                if token_type != '':
-                    output += f'{line_tokens[token_idx]} - {token_type}, {len(line_tokens[token_idx])}, linia {line_idx + 1}\n'
-                else:
-                    errors += f'Eroare linia {line_idx + 1}: {line_tokens[token_idx]}\n'
+                        # We gather all of the string elements
+                        string_idx = token_idx + 1
+                        string_output = ''
 
-                token_idx += 1
+                        # While the closing delimiter is not found or we got to the end
+                        while line_tokens[string_idx] != '"':
+                            string_output += f' {line_tokens[string_idx]}'
+                            string_idx += 1
+
+                            # If we reached end of line
+                            if not string_idx < len(line_tokens):
+                                break
+
+                        # Closing delimiter is found
+                        if string_idx < len(line_tokens):
+                            if line_tokens[string_idx] == '"':
+                                # Add the the delimiters and string to the output
+                                output += f'{line_tokens[string_idx]} - delimeter, {len(line_tokens[string_idx])}, linia {line_idx + 1}\n'
+                                output += f'{string_output[1:]} - string, {len(string_output[1:])}, linia {line_idx + 1}\n'
+                                output += f'{line_tokens[string_idx]} - delimeter, {len(line_tokens[string_idx])}, linia {line_idx + 1}\n'
+
+                                # Increment the token_idx
+                                token_idx = string_idx + 1
+
+                    # If we are in a CHAR
+                    if line_tokens[token_idx] == "'":
+
+                        # We gather all of the string elements
+                        string_idx = token_idx + 1
+                        string_output = ''
+
+                        # While the closing delimiter is not found or we got to the end
+                        while line_tokens[string_idx] != "'":
+                            string_output += f' {line_tokens[string_idx]}'
+                            string_idx += 1
+
+                            if not string_idx < len(line_tokens):
+                                break
+
+                        if string_idx < len(line_tokens):
+                            if line_tokens[string_idx] == "'":
+                                # Add the the delimiters and char to the output
+                                output += f'{line_tokens[string_idx]} - delimeter, {len(line_tokens[string_idx])}, linia {line_idx + 1}\n'
+                                output += f'{string_output[1:]} - char, {len(string_output[1:])}, linia {line_idx + 1}\n'
+                                output += f'{line_tokens[string_idx]} - delimeter, {len(line_tokens[string_idx])}, linia {line_idx + 1}\n'
+
+                                # Increment the token_idx
+                                token_idx = string_idx + 1
+
+                    # Some cases where the token_idx might be out of range
+                    if token_idx < len(line_tokens):
+
+                        token_type = self.return_token_type(line_tokens[token_idx])
+                        if token_type != '':
+                            output += f'{line_tokens[token_idx]} - {token_type}, {len(line_tokens[token_idx])}, linia {line_idx + 1}\n'
+                        else:
+                            errors += f'Eroare linia {line_idx + 1}: {line_tokens[token_idx]}\n'
+
+                        token_idx += 1
+
+            # TODO: Log in a file
+            except BaseException as err:
+                # Logs
+                print(f'Error:\n{repr(err)}\nOutput:\n{output}\nCode:\n{code}\nTokens:\n{line_tokens}\n')
 
         return output, errors
 

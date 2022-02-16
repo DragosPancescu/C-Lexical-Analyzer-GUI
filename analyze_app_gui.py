@@ -4,6 +4,8 @@ import tkinter as tk
 from tkinter import *
 from tkinter import filedialog
 
+# TODO: Create logs folder if it not exists
+
 class AnalyzerApp(tk.Tk):
     
     def __init__(self, analyzer):
