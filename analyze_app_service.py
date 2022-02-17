@@ -1,5 +1,5 @@
 import re
-import token
+import traceback
 
 class Analyzer():
 
@@ -15,12 +15,14 @@ class Analyzer():
         
         with open('tokens\operators.txt', 'r') as f:
             self.OPERATORS = f.read().split('\n')
+        
+        with open('tokens\directives.txt', 'r') as f:
+            self.DIRECTIVES = f.read().split('\n')
 
         self.COMMENTS = ['//', '/*']
         self.IDENTIFIER_RE = '[_a-zA-Z][_a-zA-Z0-9]{0,30}'
         self.FLOAT_RE = '([0-9]*[.])?[0-9]+'
 
-    # TODO REGEX for floats when multiple dots are in the number
     def return_token_type(self, token):
         # Returns token type
         if token in self.COMMENTS:
@@ -31,12 +33,16 @@ class Analyzer():
             return 'keyword'
         elif token in self.OPERATORS:
             return 'operator'
+        elif token in self.DIRECTIVES:
+            return 'directive'
         elif token.isdigit():
             return 'int'
         elif re.match(self.FLOAT_RE, token):
             return 'float'
         elif re.match(self.IDENTIFIER_RE, token):
             return 'identifier'
+        elif token == '.':
+            return 'access operator'
         return ''
 
     def tokenize_line(self, line):
@@ -46,7 +52,7 @@ class Analyzer():
         current = 0
 
         while current < len(line):
-            if line[current] in self.DELIMITERS or line[current] == ' ':
+            if line[current] in self.DELIMITERS or line[current] in [' '] or line[current] in self.OPERATORS:
 
                 if line[last:current] != '':
                     tokens.append(line[last:current])
@@ -61,6 +67,130 @@ class Analyzer():
             tokens.append(line[last:current])
 
         return tokens  
+
+    def extract_floats(self, float_token, line_idx):
+        split_float_token = float_token.split('.')
+        output = ''
+        error = ''
+
+        # If the float is .x or x. it is valid it can not be only a dot because that is a access operator
+        if len(split_float_token) == 2:
+            output += f'{float_token} - float, {len(float_token)}, linia {line_idx + 1}\n'
+        else:
+            while re.match(self.FLOAT_RE, float_token):
+                match = re.match(self.FLOAT_RE, float_token)
+
+                start = match.start()
+                end = match.end()
+                output += f'{float_token[start:end]} - float, {len(float_token[start:end])}, linia {line_idx + 1}\n'
+
+                float_token = re.sub(self.FLOAT_RE, '', float_token, 1)
+            
+            if float_token != '':
+                error += f'Eroare linia {line_idx + 1}: {float_token}\n'
+
+        return output, error
+
+    def single_comment_handle(self, line_tokens, token_idx, line_idx):
+        output = f'{line_tokens[token_idx]} - single line comment, {len(line_tokens[token_idx])}, linia {line_idx + 1}\n'
+        token_idx += 1
+
+        # Add the comment string and break the loop
+        string_output = ''
+        while token_idx < len(line_tokens):
+            string_output += f' {line_tokens[token_idx]}'
+            token_idx += 1
+
+        output += f'{string_output[1:]} - comment string, {len(string_output[1:])}, linia {line_idx + 1}\n'
+
+        return output
+
+
+    def directives_handle(self, line_tokens, token_idx, line_idx):
+        output = f'{line_tokens[token_idx]} - directive, {len(line_tokens[token_idx])}, linia {line_idx + 1}\n'
+
+        token_idx += 1
+
+        # Add the directive string and break the loop
+        string_output = ''
+        while token_idx < len(line_tokens):
+            string_output += f' {line_tokens[token_idx]}'
+            token_idx += 1
+
+        output += f'{string_output[1:]} - directive string, {len(string_output[1:])}, linia {line_idx + 1}\n'
+
+        return output
+
+    
+    def string_or_char_handle(self, line_tokens, token_idx, line_idx):
+
+        # Add the delimiter
+        output = f'{line_tokens[token_idx]} - delimeter, {len(line_tokens[token_idx])}, linia {line_idx + 1}\n'
+
+        if token_idx == (len(line_tokens) - 1): 
+            return output, token_idx
+
+        # Stores either a " or a '
+        delim = line_tokens[token_idx]
+
+        # We gather all of the string elements
+        string_idx = token_idx + 1
+        string_output = ''
+
+        # While the closing delimiter is not found or we got to the end
+        while line_tokens[string_idx] != delim:
+            string_output += f' {line_tokens[string_idx]}'
+            string_idx += 1
+
+            # If we reached end of line
+            if not string_idx < len(line_tokens):
+                break
+                        
+        # Closing delimiter is found
+        if string_idx < len(line_tokens):
+            # Add the the delimiter and string to the output
+            output += f'{string_output[1:]} - string, {len(string_output[1:])}, linia {line_idx + 1}\n'
+            output += f'{line_tokens[string_idx]} - delimeter, {len(line_tokens[string_idx])}, linia {line_idx + 1}\n'
+
+        # Closing delimiter is not found
+        else:
+            output += f'{string_output[1:]} - string, {len(string_output[1:])}, linia {line_idx + 1}\n'
+            
+        return output, string_idx
+
+
+    def reference_or_pointer_handle(self, line_tokens, token_idx, line_idx):
+        already_added = False
+        output = ''
+
+        if line_tokens[token_idx][0] in ['&', '*'] and len(line_tokens[token_idx]) > 1:
+            
+            token_type = 'reference' if line_tokens[token_idx][0] == '&' else 'pointer'
+
+            output += f'{line_tokens[token_idx][0]} - {token_type}, {len(line_tokens[token_idx][0])}, linia {line_idx + 1}\n'
+            output += f'{line_tokens[token_idx][1:]} - identifier, {len(line_tokens[token_idx][1:])}, linia {line_idx + 1}\n'
+
+            already_added = True
+
+        if line_tokens[token_idx] in ['&', '*'] and (token_idx == 0 or self.return_token_type(line_tokens[token_idx - 1]) != 'identifier'):
+            
+            token_type = 'reference' if line_tokens[token_idx] == '&' else 'pointer'
+
+            output += f'{line_tokens[token_idx]} - {token_type}, {len(line_tokens[token_idx][0])}, linia {line_idx + 1}\n'
+
+            already_added = True
+
+        # We can look back 2 tokens
+        if token_idx - 1 >= 0 and token_idx - 2 >= 0:
+            if line_tokens[token_idx] in ['&', '*'] and self.return_token_type(line_tokens[token_idx - 1]) == 'identifier' and self.return_token_type(line_tokens[token_idx - 2]) == 'keyword':
+                
+                token_type = 'reference' if line_tokens[token_idx] == '&' else 'pointer'
+
+                output += f'{line_tokens[token_idx]} - {token_type}, {len(line_tokens[token_idx][0])}, linia {line_idx + 1}\n'
+
+                already_added = True
+
+        return output, already_added
 
 
     def analyze_code(self, code):
@@ -84,72 +214,58 @@ class Analyzer():
 
             try:
                 while token_idx < len(line_tokens):
+                    # Checks if we already added to the output
+                    already_added = False
+                    
+                    # TODO: Multi line COMMENT
 
                     # If we are in a single line COMMENT
                     if line_tokens[token_idx] == '//':
                         
-                        # Add the comment indicator to the output
-                        output += f'{line_tokens[token_idx]} - single line comment, {len(line_tokens[token_idx])}, linia {line_idx + 1}\n'
-                        
-                        token_idx += 1
-
-                        # Add the comment string and break the loop
-                        string_output = ''
-                        while token_idx < len(line_tokens):
-                            string_output += f' {line_tokens[token_idx]}'
-                            token_idx += 1
-
-                        output += f'{string_output[1:]} - comment string, {len(string_output[1:])}, linia {line_idx + 1}\n'
+                        output += self.single_comment_handle(line_tokens, token_idx, line_idx)
                         break
+                    
+                    # If we encounter a directive
+                    if self.return_token_type(line_tokens[token_idx]) == 'directive':
+
+                        output += self.directives_handle(line_tokens, token_idx, line_idx)
+                        break
+
+                    # If & or * represents reference or pointer and not an operator
+                    reference_or_pointer_output, already_added = self.reference_or_pointer_handle(line_tokens, token_idx, line_idx)
+                    output += reference_or_pointer_output
 
                     # If we are in a STRING or CHAR
                     if line_tokens[token_idx] in ['"', "'"]:
                         
-                        # Stores either a " or a '
-                        delim = line_tokens[token_idx]
+                        string_or_char_output, token_idx = self.string_or_char_handle(line_tokens, token_idx, line_idx)
+                        output += string_or_char_output
+                        already_added = True
 
-                        # We gather all of the string elements
-                        string_idx = token_idx + 1
-                        string_output = ''
-
-                        # While the closing delimiter is not found or we got to the end
-                        while line_tokens[string_idx] != delim:
-                            string_output += f' {line_tokens[string_idx]}'
-                            string_idx += 1
-
-                            # If we reached end of line
-                            if not string_idx < len(line_tokens):
-                                break
-                        
-                        # Closing delimiter is found
-                        if string_idx < len(line_tokens):
-                            if line_tokens[string_idx] == delim:
-                                # Add the the delimiters and string to the output
-                                output += f'{line_tokens[string_idx]} - delimeter, {len(line_tokens[string_idx])}, linia {line_idx + 1}\n'
-                                output += f'{string_output[1:]} - string, {len(string_output[1:])}, linia {line_idx + 1}\n'
-                                output += f'{line_tokens[string_idx]} - delimeter, {len(line_tokens[string_idx])}, linia {line_idx + 1}\n'
-
-                                # Increment the token_idx
-                                token_idx = string_idx + 1
-
-                    # Some cases where the token_idx might be out of range
-                    if token_idx < len(line_tokens):
-
+                    if already_added == False:
                         token_type = self.return_token_type(line_tokens[token_idx])
                         if token_type != '':
-                            output += f'{line_tokens[token_idx]} - {token_type}, {len(line_tokens[token_idx])}, linia {line_idx + 1}\n'
+                            
+                            if token_type == 'float':
+                                float_output, float_error = self.extract_floats(line_tokens[token_idx], line_idx)
+                                output += float_output
+                                errors += float_error
+                            else:
+                                output += f'{line_tokens[token_idx]} - {token_type}, {len(line_tokens[token_idx])}, linia {line_idx + 1}\n'
                         else:
                             errors += f'Eroare linia {line_idx + 1}: {line_tokens[token_idx]}\n'
-
-                        token_idx += 1
+                
+                    token_idx += 1
 
             # TODO: Log in a file
             except BaseException as err:
                 # Logs
-                print(f'Error:\n{repr(err)}\nOutput:\n{output}\nCode:\n{code}\nTokens:\n{line_tokens}\n')
+                traceback.print_exc()
+                print(f'\nOutput:\n{output}\nCode:\n{code}\nTokens:\n{line_tokens}\n')
 
+        self.analyzed_code = output
         return output, errors
 
 
     def analyzed_code_to_json(self):
-        return "Translated Json"
+        return "Analyzed Json"

@@ -1,4 +1,3 @@
-from textwrap import fill
 import tkinter as tk
 
 from tkinter import *
@@ -31,8 +30,12 @@ class AnalyzerApp(tk.Tk):
 
         self.geometry(f'{w}x{h}+{int(x)}+{int(y - 50)}')
 
-        # Bind shortcuts
+        # Bind global shortcuts
+        self.bind_all('<Control-n>', self.new_file)
+        self.bind_all('<Control-o>', self.open_file)
         self.bind_all('<Control-s>', self.save_file)
+        self.bind_all('<Control-Shift-s>', self.save_as_file)
+        self.bind_all('<Control-Shift-o>', self.save_analyzed_code_as)
         self.bind_all('<F5>', self.run)
 
         # Create main frame
@@ -99,58 +102,71 @@ class AnalyzerApp(tk.Tk):
         self.top_bar = Menu(self)
         self.config(menu=self.top_bar)
 
+        # TODO: Read label values from a file
         # Add file menu
         self.file_menu = Menu(self.top_bar, tearoff=False)
         self.top_bar.add_cascade(label='File', menu=self.file_menu)
-        self.file_menu.add_command(label='New', command=self.new_file)
-        self.file_menu.add_command(label='Open', command=self.open_file)
-        self.file_menu.add_command(label='Save', command=self.save_file)
-        self.file_menu.add_command(label='Save As', command=self.save_as_file)
+        self.file_menu.add_command(label='New                                                        Ctrl+N', command=self.new_file)
+        self.file_menu.add_command(label='Open                                                      Ctrl+O', command=self.open_file)
+        self.file_menu.add_command(label='Save                                                        Ctrl+S', command=self.save_file)
+        self.file_menu.add_command(label='Save As                                        Ctrl+Shift+S', command=self.save_as_file)
         self.file_menu.add_separator()
-        self.file_menu.add_command(label='Save Analyzed Code As')
+        self.file_menu.add_command(label='Save Analyzed Code As            Ctrl+Shift+O', command=self.save_analyzed_code_as)
 
         # Add run menu
         self.run_menu = Menu(self.top_bar, tearoff=False)
         self.top_bar.add_cascade(label='Run', menu=self.run_menu)
-        self.run_menu.add_command(label='Run', command=self.run)
+        self.run_menu.add_command(label='Run            F5', command=self.run)
 
 
     # New file function
-    def new_file(self):
+    def new_file(self, event=None):
         self.text_box.delete('1.0', END)
+
+        self.output_box.configure(state=NORMAL)
         self.output_box.delete('1.0', END)
+        self.output_box.configure(state=DISABLED)
+
+        self.error_box.configure(state=NORMAL)
         self.error_box.delete('1.0', END)
+        self.error_box.configure(state=DISABLED)
 
         self.title('New File - CAnalyzer')
 
         self.open_status_name = False
 
     # Open file function
-    def open_file(self):
-        self.text_box.delete('1.0', END)
-        self.output_box.delete('1.0', END)
-        self.error_box.delete('1.0', END)
-
+    def open_file(self, event=None):
         text_file = filedialog.askopenfilename(title='Open File', filetypes=[('C Files', '*.c')])
 
         if text_file:
+            self.text_box.delete('1.0', END)
+            
+            self.output_box.configure(state=NORMAL)
+            self.output_box.delete('1.0', END)
+            self.output_box.configure(state=DISABLED)
+
+            self.error_box.configure(state=NORMAL)
+            self.error_box.delete('1.0', END)
+            self.error_box.configure(state=DISABLED)
+
             # Save the status
             self.open_status_name = text_file
 
-        file_name = text_file.split('/')[-1]
+            file_name = text_file.split('/')[-1]
 
-        self.title(f'{file_name} - CAnalyzer')
+            self.title(f'{file_name} - CAnalyzer')
 
-        # Read file contents and show them
-        file_contents = ''
-        with open(text_file, 'r') as f:
-            file_contents = f.read()
+            # Read file contents and show them
+            file_contents = ''
+            with open(text_file, 'r') as f:
+                file_contents = f.read()
         
-        self.text_box.insert(END, file_contents)
+            self.text_box.insert(END, file_contents)
 
 
     # Save As file function
-    def save_as_file(self):
+    def save_as_file(self, event=None):
         text_file = filedialog.asksaveasfilename(title='Save As', defaultextension='.*', filetypes=[('C Files', '*.c')])
         if text_file:
             self.open_status_name = text_file
@@ -165,7 +181,7 @@ class AnalyzerApp(tk.Tk):
 
 
     # Save file function
-    def save_file(self, event):
+    def save_file(self, event=None):
         if self.open_status_name:
             # Write text box contents to file
             with open(self.open_status_name, 'w') as f:
@@ -175,7 +191,7 @@ class AnalyzerApp(tk.Tk):
     
 
     # Run translator
-    def run(self, event):
+    def run(self, event=None):
         code = self.text_box.get(1.0, END)
 
         if code != '\n':
@@ -190,3 +206,23 @@ class AnalyzerApp(tk.Tk):
             self.error_box.delete('1.0', END)
             self.error_box.insert(END, errors)
             self.error_box.configure(state=DISABLED)
+    
+
+    def save_analyzed_code_as(self, event=None):
+        analyzed_code = self.output_box.get(1.0, END)
+        errors = self.error_box.get(1.0, END)
+
+        # Get the data to save
+        export = ''
+        if analyzed_code != '\n':
+            export += f'Analyzed code:\n{analyzed_code}\n'
+
+        if errors != '\n':
+            export += f'Errors:\n{errors}'
+
+        if export != '':
+            text_file = filedialog.asksaveasfilename(title='Save As', defaultextension='.*', filetypes=[('Text', '*.txt')])
+            if text_file:
+                # Write data to file
+                with open(text_file, 'w') as f:
+                    f.write(export)
