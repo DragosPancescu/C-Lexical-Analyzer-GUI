@@ -1,10 +1,12 @@
 import re
 import traceback
+import json
 
 class Analyzer():
 
     def __init__(self):
-        self.analyzed_code = ''
+        self.analyzed_code_json = []
+        self.errors_json = []
 
         # Read the tokens
         with open('tokens\delimiters.txt', 'r') as f:
@@ -68,6 +70,29 @@ class Analyzer():
 
         return tokens  
 
+
+    def add_to_output_json(self, token, token_type, line):
+        self.analyzed_code_json.append({token: [{'tip': token_type}, {'lungime': len(token)}, {"linia": line}]})
+
+
+    def add_to_errors_json(self, token, line):
+        self.errors_json.append({token: {'linia': line}})
+
+
+    def serialize_output_and_errors(self):
+        output = {'Analyzed Code': self.analyzed_code_json}
+        errors = {'Errors': self.errors_json}
+
+        output = json.dumps(output, indent=4)
+        errors = json.dumps(errors, indent=4)
+
+        return f'{output}\n{errors}'
+
+    def reset_jsons(self):
+        self.analyzed_code_json = []
+        self.errors_json = []
+
+
     def extract_floats(self, float_token, line_idx):
         split_float_token = float_token.split('.')
         output = ''
@@ -76,6 +101,7 @@ class Analyzer():
         # If the float is .x or x. it is valid it can not be only a dot because that is a access operator
         if len(split_float_token) == 2:
             output += f'{float_token} - float, {len(float_token)}, linia {line_idx + 1}\n'
+            self.add_to_output_json(float_token, 'float', line_idx + 1)
         else:
             while re.match(self.FLOAT_RE, float_token):
                 match = re.match(self.FLOAT_RE, float_token)
@@ -83,16 +109,19 @@ class Analyzer():
                 start = match.start()
                 end = match.end()
                 output += f'{float_token[start:end]} - float, {len(float_token[start:end])}, linia {line_idx + 1}\n'
+                self.add_to_output_json(float_token[start:end], 'float', line_idx + 1)
 
                 float_token = re.sub(self.FLOAT_RE, '', float_token, 1)
             
             if float_token != '':
                 error += f'Eroare linia {line_idx + 1}: {float_token}\n'
+                self.add_to_errors_json(float_token, line_idx + 1)
 
         return output, error
 
     def single_comment_handle(self, line_tokens, token_idx, line_idx):
         output = f'{line_tokens[token_idx]} - single line comment, {len(line_tokens[token_idx])}, linia {line_idx + 1}\n'
+        self.add_to_output_json(line_tokens[token_idx], 'single line comment', line_idx + 1)
         token_idx += 1
 
         # Add the comment string and break the loop
@@ -102,12 +131,14 @@ class Analyzer():
             token_idx += 1
 
         output += f'{string_output[1:]} - comment string, {len(string_output[1:])}, linia {line_idx + 1}\n'
+        self.add_to_output_json(string_output[1:], 'comment string', line_idx + 1)
 
         return output
 
 
     def directives_handle(self, line_tokens, token_idx, line_idx):
         output = f'{line_tokens[token_idx]} - directive, {len(line_tokens[token_idx])}, linia {line_idx + 1}\n'
+        self.add_to_output_json(line_tokens[token_idx], 'directive', line_idx + 1)
 
         token_idx += 1
 
@@ -118,6 +149,7 @@ class Analyzer():
             token_idx += 1
 
         output += f'{string_output[1:]} - directive string, {len(string_output[1:])}, linia {line_idx + 1}\n'
+        self.add_to_output_json(string_output[1:], 'directive string', line_idx + 1)
 
         return output
 
@@ -126,6 +158,7 @@ class Analyzer():
 
         # Add the delimiter
         output = f'{line_tokens[token_idx]} - delimeter, {len(line_tokens[token_idx])}, linia {line_idx + 1}\n'
+        self.add_to_output_json(line_tokens[token_idx], 'delimeter', line_idx + 1)
 
         if token_idx == (len(line_tokens) - 1): 
             return output, token_idx
@@ -145,16 +178,16 @@ class Analyzer():
             # If we reached end of line
             if not string_idx < len(line_tokens):
                 break
-                        
+        
+        # Add the string
+        output += f'{string_output[1:]} - string, {len(string_output[1:])}, linia {line_idx + 1}\n'
+        self.add_to_output_json(string_output[1:], 'string', line_idx + 1)
+
         # Closing delimiter is found
         if string_idx < len(line_tokens):
-            # Add the the delimiter and string to the output
-            output += f'{string_output[1:]} - string, {len(string_output[1:])}, linia {line_idx + 1}\n'
+            # Add the delimiter
             output += f'{line_tokens[string_idx]} - delimeter, {len(line_tokens[string_idx])}, linia {line_idx + 1}\n'
-
-        # Closing delimiter is not found
-        else:
-            output += f'{string_output[1:]} - string, {len(string_output[1:])}, linia {line_idx + 1}\n'
+            self.add_to_output_json(line_tokens[string_idx], 'delimeter', line_idx + 1)
             
         return output, string_idx
 
@@ -168,7 +201,10 @@ class Analyzer():
             token_type = 'reference' if line_tokens[token_idx][0] == '&' else 'pointer'
 
             output += f'{line_tokens[token_idx][0]} - {token_type}, {len(line_tokens[token_idx][0])}, linia {line_idx + 1}\n'
+            self.add_to_output_json(line_tokens[token_idx][0], token_type, line_idx + 1)
+
             output += f'{line_tokens[token_idx][1:]} - identifier, {len(line_tokens[token_idx][1:])}, linia {line_idx + 1}\n'
+            self.add_to_output_json(line_tokens[token_idx][1:], 'identifier', line_idx + 1)
 
             already_added = True
 
@@ -177,6 +213,7 @@ class Analyzer():
             token_type = 'reference' if line_tokens[token_idx] == '&' else 'pointer'
 
             output += f'{line_tokens[token_idx]} - {token_type}, {len(line_tokens[token_idx][0])}, linia {line_idx + 1}\n'
+            self.add_to_output_json(line_tokens[token_idx], token_type, line_idx + 1)
 
             already_added = True
 
@@ -187,6 +224,7 @@ class Analyzer():
                 token_type = 'reference' if line_tokens[token_idx] == '&' else 'pointer'
 
                 output += f'{line_tokens[token_idx]} - {token_type}, {len(line_tokens[token_idx][0])}, linia {line_idx + 1}\n'
+                self.add_to_output_json(line_tokens[token_idx], token_type, line_idx + 1)
 
                 already_added = True
 
@@ -252,8 +290,10 @@ class Analyzer():
                                 errors += float_error
                             else:
                                 output += f'{line_tokens[token_idx]} - {token_type}, {len(line_tokens[token_idx])}, linia {line_idx + 1}\n'
+                                self.add_to_output_json(line_tokens[token_idx], token_type, line_idx + 1)
                         else:
                             errors += f'Eroare linia {line_idx + 1}: {line_tokens[token_idx]}\n'
+                            self.add_to_errors_json(line_tokens[token_idx], line_idx + 1)
                 
                     token_idx += 1
 
@@ -265,7 +305,3 @@ class Analyzer():
 
         self.analyzed_code = output
         return output, errors
-
-
-    def analyzed_code_to_json(self):
-        return "Analyzed Json"

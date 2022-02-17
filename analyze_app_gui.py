@@ -213,16 +213,23 @@ class AnalyzerApp(tk.Tk):
         errors = self.error_box.get(1.0, END)
 
         # Get the data to save
-        export = ''
+        export_txt = ''
         if analyzed_code != '\n':
-            export += f'Analyzed code:\n{analyzed_code}\n'
+            export_txt += f'Analyzed code:\n{analyzed_code}\n'
 
         if errors != '\n':
-            export += f'Errors:\n{errors}'
+            export_txt += f'Errors:\n{errors}'
 
-        if export != '':
-            text_file = filedialog.asksaveasfilename(title='Save As', defaultextension='.*', filetypes=[('Text', '*.txt')])
+        if export_txt != '':
+            text_file = filedialog.asksaveasfilename(title='Save As', defaultextension='.json', filetypes=[('Text', '*.txt'), ('JSON', '*.json')])
             if text_file:
-                # Write data to file
-                with open(text_file, 'w') as f:
-                    f.write(export)
+
+                # What kind of file
+                if text_file.split('.')[1] == 'txt':
+                    # Write data to file
+                    with open(text_file, 'w') as f:
+                        f.write(export_txt)
+                else:
+                     # Write data to file
+                    with open(text_file, 'w') as f:
+                        f.write(self.analyzer.serialize_output_and_errors())
