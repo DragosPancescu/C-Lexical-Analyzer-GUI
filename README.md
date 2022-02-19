@@ -1,1 +1,1 @@
-First project for the Compilers course, simple translator using python with a tkinter GUI.
+First project for the Compilers course, simple lexical analyzer using python with a tkinter GUI.
